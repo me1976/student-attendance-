@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>كشف الغياب</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap');
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{
+  --blue:#1d4ed8;--blue2:#1e40af;--blue-soft:#eff6ff;
+  --red:#dc2626;--red-soft:#fef2f2;--red-border:#fca5a5;
+  --green:#16a34a;--green-soft:#f0fdf4;
+  --bg:#f1f5f9;--white:#fff;--border:#e2e8f0;
+  --text:#0f172a;--muted:#64748b;--light:#f8fafc;
+}
+html,body{height:100%;overflow:hidden}
+body{font-family:'Tajawal',sans-serif;background:var(--bg);color:var(--text);direction:rtl;display:flex;flex-direction:column}
+
+/* ── TOP BAR ── */
+.topbar{
+  background:var(--blue);color:white;
+  padding:12px 16px 10px;
+  display:flex;align-items:center;justify-content:space-between;
+  flex-shrink:0;
+  box-shadow:0 2px 8px rgba(29,78,216,.35);
+}
+.topbar-right{display:flex;align-items:center;gap:10px}
+.topbar-right h1{font-size:20px;font-weight:800}
+.topbar-date{font-size:14px;opacity:.85;background:rgba(128, 0, 32, 0.15);padding:5px 12px;border-radius:12px}
+.topbar-left{display:flex;gap:8px}
+.icon-btn{background:rgba(255,255,255,.15);border:none;color:white;border-radius:8px;width:36px;height:36px;display:grid;place-items:center;font-size:16px;cursor:pointer}
+
+/* ── SCREENS ── */
+.screen{flex:1;overflow-y:auto;overflow-x:hidden;display:none;flex-direction:column;-webkit-overflow-scrolling:touch}
+.screen.active{display:flex}
+
+/* ── SCREEN 1: CLASS LIST ── */
+#s-classes{padding:12px}
+.screen-title{font-size:13px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;padding:0 4px;margin-bottom:10px}
+.class-list{display:flex;flex-direction:column;gap:8px}
+.class-row{
+  background:var(--white);border-radius:14px;
+  padding:18px 18px;
+  display:flex;align-items:center;justify-content:space-between;
+  cursor:pointer;border:2px solid transparent;
+  transition:all .15s;
+  box-shadow:0 1px 3px rgba(0,0,0,.06);
+}
+.class-row:active{transform:scale(.98);background:var(--blue-soft)}
+.class-row.has-absent{border-color:var(--red-border)}
+.cr-name{font-size:19px;font-weight:700}
+.cr-meta{display:flex;align-items:center;gap:8px}
+.cr-total{font-size:15px;color:var(--muted);font-weight:500}
+.cr-absent{background:var(--red);color:white;font-size:14px;font-weight:700;padding:4px 11px;border-radius:20px}
+.cr-arrow{color:var(--muted);font-size:22px}
+
+/* ── SCREEN 2: STUDENTS ── */
+#s-students{padding:0}
+.students-header{
+  background:var(--white);padding:14px 16px;
+  display:flex;flex-direction:column;gap:12px;
+  border-bottom:2px solid var(--border);
+  flex-shrink:0;position:sticky;top:0;z-index:10;
+}
+.back-btn{background:var(--blue-soft);color:var(--blue);border:none;border-radius:10px;width:40px;height:40px;display:grid;place-items:center;font-size:20px;cursor:pointer;flex-shrink:0}
+.sh-info{flex:1}
+.sh-info h2{font-size:20px;font-weight:800}
+.sh-info .sh-stats{font-size:14px;color:var(--muted);margin-top:3px;font-weight:500}
+.sh-actions{display:flex;gap:10px}
+.sm-btn{border:none;border-radius:12px;padding:13px 0;font-family:'Tajawal',sans-serif;font-size:16px;font-weight:800;cursor:pointer;flex:1;text-align:center}
+.sh-top{display:flex;align-items:center;gap:10px}
+.sm-btn.red{background:var(--red-soft);color:var(--red)}
+.sm-btn.green{background:var(--green-soft);color:var(--green)}
+
+.students-list{padding:10px 12px;display:flex;flex-direction:column;gap:7px;padding-bottom:100px}
+.student-row{
+  background:var(--white);border-radius:12px;
+  padding:16px 16px;
+  display:flex;align-items:center;gap:12px;
+  cursor:pointer;border:2px solid var(--border);
+  transition:all .12s;
+  box-shadow:0 1px 2px rgba(0,0,0,.04);
+}
+.student-row:active{transform:scale(.98)}
+.student-row.absent{background:var(--red-soft);border-color:var(--red-border)}
+.sr-num{width:34px;height:34px;min-width:34px;border-radius:50%;background:var(--light);display:grid;place-items:center;font-size:14px;font-weight:700;color:var(--muted);transition:all .12s}
+.student-row.absent .sr-num{background:var(--red);color:white}
+.sr-name{flex:1;font-size:16px;font-weight:500;line-height:1.35}
+.student-row.absent .sr-name{color:var(--red);font-weight:700}
+.sr-status{font-size:22px;opacity:0;transition:opacity .12s}
+.student-row.absent .sr-status{opacity:1}
+
+/* ── SEND BAR (fixed bottom) ── */
+.send-bar{
+  position:fixed;bottom:0;left:0;right:0;
+  background:var(--white);border-top:1px solid var(--border);
+  padding:12px 16px;padding-bottom:max(12px, env(safe-area-inset-bottom));
+  display:none;
+  box-shadow:0 -4px 16px rgba(0,0,0,.08);
+  z-index:50;
+}
+.send-bar.visible{display:flex;gap:10px;align-items:center}
+.send-info{flex:1}
+.send-info .si-count{font-size:17px;font-weight:800;color:var(--red)}
+.send-info .si-label{font-size:13px;color:var(--muted)}
+.send-btn{
+  background:var(--blue);color:white;border:none;border-radius:12px;
+  padding:14px 26px;font-family:'Tajawal',sans-serif;font-size:17px;font-weight:700;
+  cursor:pointer;display:flex;align-items:center;gap:6px;
+  transition:background .15s;
+}
+.send-btn:active{background:var(--blue2)}
+.send-btn:disabled{opacity:.4}
+.spinner{width:16px;height:16px;border:2px solid rgba(255,255,255,.4);border-top-color:white;border-radius:50%;animation:spin .7s linear infinite;display:none}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── MODAL ── */
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:flex-end}
+.modal-bg.open{display:flex}
+.modal{
+  background:white;border-radius:20px 20px 0 0;
+  padding:20px 20px;padding-bottom:max(20px,env(safe-area-inset-bottom));
+  width:100%;max-height:85vh;overflow-y:auto;
+}
+.modal-handle{width:40px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 16px}
+.modal h3{font-size:16px;font-weight:800;margin-bottom:12px}
+.modal p{font-size:13px;color:var(--muted);line-height:1.8;margin-bottom:10px}
+.modal ol{padding-right:16px;font-size:13px;line-height:2.2}
+.modal code{background:var(--light);border:1px solid var(--border);padding:1px 5px;border-radius:4px;font-size:11px;font-family:monospace;direction:ltr}
+.script-box{background:#0f172a;color:#7dd3fc;border-radius:10px;padding:12px;font-size:10px;font-family:monospace;direction:ltr;text-align:left;line-height:1.7;margin:10px 0;overflow-x:auto;white-space:pre;border:1px solid #1e3a5f}
+.url-input{width:100%;padding:12px;border:1.5px solid var(--border);border-radius:10px;font-family:'Tajawal',sans-serif;font-size:13px;margin-top:8px;direction:ltr;outline:none}
+.url-input:focus{border-color:var(--blue)}
+.modal-btns{display:flex;gap:8px;margin-top:16px}
+.mbtn{flex:1;padding:12px;border-radius:10px;border:none;font-family:'Tajawal',sans-serif;font-size:14px;font-weight:700;cursor:pointer}
+.mbtn.primary{background:var(--blue);color:white}
+.mbtn.secondary{background:var(--light);color:var(--text);border:1px solid var(--border)}
+
+/* ── TOAST ── */
+.toast{position:fixed;top:80px;left:50%;transform:translateX(-50%) translateY(-20px);background:#0f172a;color:white;padding:10px 20px;border-radius:12px;font-size:13px;font-weight:600;opacity:0;transition:all .3s;z-index:999;white-space:nowrap;pointer-events:none}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.toast.success{background:var(--green)}
+.toast.error{background:var(--red)}
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div class="topbar">
+  <div class="topbar-right">
+    <span>📋</span>
+    <h1 style="font-size: 16px;">كشف غياب مدرسة أبي بكر الصديق</h1>
+  </div>
+  <div style="display:flex;align-items:center;gap:6px">
+    <div class="topbar-date" id="todayDate" style="font-size: 12px; padding: 4px 8px;"></div>
+    <button class="icon-btn" onclick="goHome()" title="الرئيسية">🏠</button>
+    <button class="icon-btn" onclick="openModal()" title="إعداد الربط">⚙️</button>
+  </div>
+</div>
+
+<!-- SCREEN 1: CLASS LIST -->
+<div class="screen active" id="s-classes">
+  <div style="padding:12px">
+    <div class="screen-title">اختر الصف الدراسي</div>
+    <div class="class-list" id="classList"></div>
+  </div>
+</div>
+
+<!-- SCREEN 2: STUDENTS -->
+<div class="screen" id="s-students">
+  <div class="students-header">
+    <div class="sh-top">
+      <button class="back-btn" onclick="goBack()">←</button>
+      <div class="sh-info">
+        <h2 id="sh-title">—</h2>
+        <div class="sh-stats" id="sh-stats">—</div>
+      </div>
+    </div>
+    <div class="sh-actions">
+      <button class="sm-btn green" onclick="markAll(false)">✅ الكل حاضر</button>
+      <button class="sm-btn red" onclick="markAll(true)">❌ الكل غائب</button>
+    </div>
+  </div>
+  <div class="students-list" id="studentsList"></div>
+</div>
+
+<!-- SEND BAR -->
+<div class="send-bar" id="sendBar">
+  <div class="send-info">
+    <div class="si-count" id="absentCount">0 غائب</div>
+    <div class="si-label">اضغط إرسال لحفظ الغياب</div>
+  </div>
+  <button class="send-btn" id="sendBtn" onclick="sendToSheets()">
+    إرسال 📤
+    <div class="spinner" id="sendSpinner"></div>
+  </button>
+</div>
+
+<!-- MODAL -->
+<div class="modal-bg" id="setupModal" onclick="handleModalBgClick(event)">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <h3>⚙️ ربط التطبيق بـ Google Sheets</h3>
+    <p>مرة واحدة فقط — اتبع هذه الخطوات:</p>
+    <ol>
+      <li>افتح الـ Google Sheet في Drive</li>
+      <li>من القائمة: <code>Extensions</code> ← <code>Apps Script</code></li>
+      <li>احذف الكود الموجود والصق هذا:</li>
+    </ol>
+    <div class="script-box">function doPost(e) {
+  var sheet = SpreadsheetApp
+    .getActiveSpreadsheet()
+    .getActiveSheet();
+  var data = JSON.parse(e.postData.contents);
+  data.rows.forEach(function(row) {
+    sheet.appendRow([
+      row.name, row.className,
+      row.date, row.status
+    ]);
+  });
+  return ContentService
+    .createTextOutput(JSON.stringify({result:"success"}))
+    .setMimeType(ContentService.MimeType.JSON);
+}</div>
+    <ol start="4">
+      <li>💾 احفظ</li>
+      <li><strong>Deploy</strong> ← <strong>New deployment</strong></li>
+      <li>النوع: <code>Web app</code></li>
+      <li>Execute as: <code>Me</code> — Access: <code>Anyone</code></li>
+      <li>انسخ الـ URL والصقه هنا:</li>
+    </ol>
+    <input class="url-input" type="url" id="scriptUrl" placeholder="https://script.google.com/macros/s/...">
+    <div class="modal-btns">
+      <button class="mbtn secondary" onclick="closeModal()">إلغاء</button>
+      <button class="mbtn primary" onclick="saveUrl()">💾 حفظ الرابط</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const STUDENTS = {"الثاني":["ابي ابراهيم محمد مرعي","احمد مالك نصر الزواهرة","الياس رمضان يحيى عبدالله احمد","امير ربيع سلمان الجرايدة","امير علي حسين المرعي","ايهم بكر حسين عطراوي","جواد احمد فلاح الشرفات","جود خالد يحيى المرعي","جود نزار عبدالله الخزاعله","زين الدين نايف حمدان خزاعلة","عبد الرحمن فادي علي المشارقة","عبد الرحمن مهند جمعه مرعي","عبدالرحمن نبيل جميل السرحان","غيث عبده عمر السخني","مؤمن حسين عوض المساعيد","محمود سالم سلامة المقبل","مصطفى عماد وجيه ابو سريه","ميار عبد الله احمد عليمات","يزيد عادل محمد عاشور","يمان مصطفى محمد خير عيسى"],"الثالث":["اجود نور جمعه السرحان","احمد توفيق خالد ابو هشهش","احمد محمد سليمان عليان","ادم ابراهيم عبدالله عاشور","اسيد وعد جمعه السرحان","اصيل محمد احمد اعليوي","جلال محمد جلال أبو دحيله","جميل محمد محمود الخزاعلة","جود ابراهيم سالم الرواشده","حبيب الرحمن سالم محمد الفحيلي","خالد عودة عاطف خزاعله","رائد مراد جمعه المشاقبه","سراج احمد سليمان الخزاعله","سلطان نيزار عبدالله الخزاعلة","شهم محمد روحي الخزاعلة","ضياء احمد خلف الزبيد","طالب فيصل طالب النعيمي","كرم حسين عوض المساعيد","كرم زهير سلامه المقبل","كرم لورنس بكر ابو بكر","مالك علي عطا الله النفيل","ميار محمد حسين المرعي","وليد خالد صلاح السوالمه","يمان علي محمد ابو الرب","يوسف محمود محمد مرعي"],"الرابع أ":["ادم عبد الناصر لطفي غريفات","الحارث عمر احمد علي","القيصر لورنس بكر ابو بكر","امير محمد احمد الصالح","اياس ابراهيم مفضي الجرايده","تيم منيب موسى العبد الله","ثائر اكرم يحيى العطيه","حيدر اسامه جمعه المشاقبه","خالد ياسين خليفه مشاقبه","راشد خيرالله احمد مشاقبه","رزق فواز حسين عرابي","سلمان محمد سلمان الجرايده","صلاح الدين علاء محمد الزيود","صلاح عبد الله محمد الجرايده","عبد الله حسن خالد أبو هشهش","قيس عبده عمر السخني","كرم مصطفى محمد خير عيسى","مجد محمود السيد عوض صالح","محمد عبد الله خلف الخلايله","محمد علي محمد العرقان","محمود فلاح سالم عليمات"],"الرابع ب":["ادم عبدالرحمن عبدالله الخزاعله","اكرم محمد تيسير الخزاعله","ايمن نايف ايمن الخزاعله","ايمن يوسف فواز العلاونه","تيم محمد خميس الغوج","حمزه ابراهيم عبدالله المساعيد","ريان ابراهيم جمال ابو هشهش","ريان محمد سعيد غفرجي","شهم حسين ابراهيم الزيود","عدي زيد قبلان الوادي","فيصل عامر مسك ابو ذوابه","كرم فادي عادل مراشده","مهند احمد خالد الهبارنه","موفق نمر خالد ابو هشهش","نور الدين محمد احمد علي","يوسف يحيى علي السخني"],"الخامس أ":["احمد عرفات نعمان الجعبري","ادم محمد عبدالله العواقلة","اوس حسن سعود الخزاعلة","بلال فيصل علي الخزاعله","جمال حسن خالد ابو هشهش","حامد عاطف حامد عوده الله","سائد صالح لافي المساعيد","طارق محمود عوض خشاشنه","عبد الرحمن حابس ارشيد المشاقبه","عبد الرحمن نواف عقيل ابو لاحم","عبد الله احمد محمد احمد الامبابي","عبدالرحمن طارق سعيد الزعبي","عدي نور جمعه السرحان","عمران هشام هارون الشريف","كرم محمد صالح مسلم","مؤمن عبد الله خلف الخلايله","محمد سعيد وعد جمعه السرحان","محمد عايد احمد خوالده","وائل ابراهيم عبد الله عاشور","وسام توفيق خالد ابو هشهش","يامن جاسر ارشيد المشاقبه","يمان محمد حسين المرعي"],"الخامس ب":["انمار فيصل قاسم العبابنه","حازم حسن لطفي الصايغ","حمزه احمد غازى العوض","حمزه محمد علي حسبان","خالد جاسم خالد الخالدي","خلف محمد خلف العنزي","ريان حسن خالد ابو هشهش","سالم عامر محمد الشديفات","سالم فضل الله ارضيمان القوطان","طارق حسين علي الحسن","عامر خالد بهجات الشريده","علي هيثم محمد مامون طبيله","فهد ربيع سلمان الجرايده","كرم محمد عطا الله الحسبان","محمد احمد اسماعيل ابو شعر","محمد شادي سعود السعيداني","محمد شادي محمد السرحان","محمد علي محمد الزيادنه","محمد فيصل حمد الحراحشه","محمد وصفي محمد سعيد مريان"],"الخامس ج":["احمد جاد محمد الصعيده","بيبرس عايد وحيد الزيادنه","تميم عمر محمد التوينه","تميم محمد عيد ابو عويضه","تيم علي محمود الزيودي","جواد عيد حطاب الزيود","جواد مامون احمد المومني","راشد انس محمود موسى","ريان صلاح امين ابو حجر","طلال مالك حمد المساعيد","عبد الرحمن اسلام احمد المشاقبه","كرم عمر محمد الزيود","محمد امجد سالم الكتيران","محمد نايف سليمان الجرايده","وسيم عبدالله محمود الشريف","يامن محمد احمد اعليوي","يزن صالح احمد السعود","يزيد محمد عبد الجليل الشدايده"],"السادس أ":["احمد صدام حسين الحوامده","احمد عبد الجبار عبد الهادى موسى","احمد محمد جابر العويدات","اسلام عصام محمد المدني","الطيب الطاهر احمد محمود الجرايده","المعتصم بالله عمار مسك ابو ذوابه","ايوب بلال رضا الناصر","توفيق محمد فايز اشبيلات","جواد خيرالله منصور الصمادي","جواد سلمان عوده العليمات","حسان محمد عقله الزيود","ريان عبدالله عوض الوقفي","سليمان دانيز فاتح سعيد كوتش","لقمان رائد عبد الهادي موسى","ليث وعد جمعه السرحان","مؤيد احمد عوده الشديفات","محمد عطا الله محمود الزيود","محمد يوسف عقل العيسى","محمود محمد محمود الزيود","هاشم طارق محمد الشروقي","هيثم بكر حسين عطراوي","يوسف رافع مطرد السميران","يوسف شريف محمود الخالدي"],"السادس ب":["ابراهيم خالد حسين ابو سماقه","احمد عبد الله عواد عليمات","احمد محمد محمود الزيودي","امير محمد ابراهيم الزيود","تاج الدين احمد طايع الحسبان","خالد حسين علي النعيمي","دانيال علاء محمد الخزاعله","رائد محمد حسن الخزاعله","صقر عبدالله جابر العويدات","عباده صلاح الدين علي الحوامده","عبد الرحمن احمد عيد الخزاعله","عبد الله محمد خلف الزيود","عدي احمد عادل ابو الشعر","علي سمير بهجات السلطي","عمر سليمان محمد الفحيلي","غيث حسام احمد الوقفي","قصي عبدالله احمد عليان","كرم طاهر عبد الله العلي","مؤمن بالله محمد صالح مسلم","محمد حسام موفق عزيز","محمد عدي صالح الجبور","محمد عمر محمد العبابنه","نورس ياسين محمد الخليفات","هيثم احمد حسن الزيود","يامن سالم محمد الفحيلي","يوسف عبد الله محمد المغربي"],"السادس ج":["احمد رائد حمد شدايده","احمد عدي محمود المشاقبه","احمد عمر احمد الجرايده","المعتصم بالله محمد قاسم الربيع","ايهم محمد تيسير الخزاعله","تقي الدين اسامه جمعه المشاقبه","ريان شادي كايد الحراحشة","سفيان يزن خميس عبد الله","سلطان حسين احمد الفرج","سلطان محمد سليمان عليان","عبد الله محمد عوده الزريقات","عثمان محمد ابراهيم الحسبان","عمر طارق عبدالله الخزاعله","عمر عبد القادر عمر الجعبري","ليث لورنس بكر ابو بكر","مؤمن عوض محمد البحره","ماهر مراد جمعه المشاقبه","محمد رافع سعود الخزاعله","محمد عامر شاهر الشمري","محمد قدري عيد سلمان","مراد فراس عيد ابو عويضه","مصعب يوسف احمد السعود","يزيد لوي عبد الحليم ابو سعد","يزين يزن صالح الخزاعله"],"السابع أ":["احمد علي مصطفى الخطاطبه","احمد عيد خلف الزيود","انس اياد عبدالمجيد ابونبهان","ايهم رياض حسين الدواليب الصقر","حسام ابراهيم عبد الله المساعيد","حسن علي حسن اخريوش","حسن علي محمد الزيادنه","ريان رياض حسين الدواليب الصقر","عبد الكريم سعود نهار الخزاعله","عبدالحي احمد عبدالجليل الشدايده","عروه طلال حسين ابو مالك","قتيبه ناصر حسين الدواليب الصقر","محمد رائد حمد الشدايدة","محمد صالح كريم الشرعة","محمد مراد محمد الرويلي","محمد لورنس بكر ابو بكر","معتز حسام عبد القادر كباريه","وسام ابراهيم عبد الله المساعيد","يمان عصام محمد المدني","يوسف طارق احمد الحراحشه"],"السابع ب":["احمد حسن سعود الخزاعله","احمد سالم سلامه المقبل","احمد محمد احمد الصالح","احمد محمد احمد علي","ايهم عمر محمد الجدايه","جودت بلال محمود الزيود","حمزه يحيى هامل ابو ذوابه","ربيع محمد سلمان الجرايده","سراج محمد عبد الجبار النجار","سليمان ايوب سليمان الجرايده","ضيف الله محمد ضيف الله العمرو","عبدالرحمن محمد عبدالله العرقان","كرم خالد احمد الهبارنه","كرم محمد حسن الاسعد","محمد احمد عوده الزريقات","محمد زهير سلامه المقبل","محمد عيد حطاب الزيود","مدين علي حسين ابو مالك","مراد موسى محمد الزعبي","معتز حمزه صلاح الزيود","نزار يحيى فرج حسن","يعقوب طه احمد الجرايده","ينال محمد حسن الاسعد"],"السابع ج":["احمد محمد احمد السعود","المعتصم بالله يوسف مطر عليمات","ايهاب احمد فايز حجاج","تركي زياد عبدالقادر الزيود","ثامر احمد جابر العويدات","خالد علي سالم الجرايده","ريان خالد اسماعيل الخزاعله","ريان عدنان عقله الحراحشه","زين العابدين حسين علي النعيمي","سيف الدين ركان عثمان الزبيد","عبد الله احمد محمد الحسبان","عبدالله اسلام احمد المشافبه","قاسم معتصم بالله قاسم الربيع","قصي عامر موسى الزبون","كرم زيد احمد السعود","ليث محمد عبدالكريم الكردى","محمد عماد حمدي المثاني","محمد محمود خلف المشاقبه","يحيى محمد عبدالله خزاعله"],"الثامن أ":["احمد محمد احمد الخزاعلة","اشرف احمد حمد العموش","اصيل سليم احمد ابو عويضه","امير محمد نجيب الخزاعله","ايهم محمد عياده عليمات","تميم نبيل جبر حوامده","جواد ماهر جمعه المشاقبه","حمزة محمد فلاح الخزاعلة","زيد علاء جمعه المشاقبة","طارق مأمون صالح المرعي","عبد الله محمد مفضي الحوامده","علي حسين علي الزيود","قصي رائد حمد ذياب","مجد عمر جميل الخليفه","محمد احمد محمد الزيود","محمد صدام حسين الحوامدة","محمد عامر محمد الشديفات","محمد يوسف علي الزيود","محمود أحمد محمود الجرايدة","وديع عمر محمد العبابنه","يامن لوي عبد الحليم ابو سعد"],"الثامن ب":["ابراهيم محمد ابراهيم الزيود","اصيل امين سليمان عليان","امير حسن عبد الكريم الخزاعله","ايوب عمر احمد علي","باسل فراس سليمان الفواعرة","جابر عمر جابر العويدات","جواد حسين عوض المساعيد","حاتم فادي علي الشرف","خالد سلمان محمد الخزاعله","رسام سامي حسين الحوامدة","ريان محمد حسن الاسعد","طارق عمار مسك ابو ذوابة","عبد الاله ابراهيم محمد مرعي","عبد الرحمن عبد الله محمد الطحان","علي احمد خالد الهبارنه","قصي عبده عمر السخني","كرم عوده عاطف الخزاعله","مالك محمد شحادة الشنابلة","محمد اشرف احمد الخزاعله","محمد نضال عبد الله الخزاعله","مصطفى سلامة رشيد العرقان","هاشم ايمن ابراهيم الخزاعله","ياسين محمد السعيد عبد المنعم سلطان"],"الثامن ج":["ابراهيم وصفي محمد سعيد مريان","احمد عبد الحي عواد السرحان","احمد محمد محمود الخزاعله","احمد محمد مفضي الحوامده","امير عصام محمد المدني","حاتم فراس محمد ابو الرب","خالد محمد عبدالكريم الخوالده","سراج اسامه احمد المجالي","عبد الحي امين احمد المومني","عيسى سامي محمد الزيود","كريم عماد وجيه ابو سريه","مؤمن عماد محمود الزيود","مجاهد احمد اسماعيل ابو شعر","مجد احمد سالم الخزاعله","مجد ايمن محمد خيري عوض","محمد تمام جوده تمام جاب الله","محمد درار احمد غنايم","محمد عبد الناصر لطفي غريفات","مراد رامي محمد النجار","وديع عدي عاطف الخزاعلة","يزن خالد صالح الخزاعله"]};
+
+let currentClass = null;
+const absentMap = {};
+Object.keys(STUDENTS).forEach(c => absentMap[c] = new Set());
+
+document.addEventListener('DOMContentLoaded', () => {
+  const now = new Date();
+  document.getElementById('todayDate').textContent =
+    now.toLocaleDateString('ar-JO', {weekday:'short', month:'long', day:'numeric'});
+  buildClassList();
+  const saved = localStorage.getItem('appsScriptUrl');
+  if (saved) document.getElementById('scriptUrl').value = saved;
+});
+
+function buildClassList() {
+  const list = document.getElementById('classList');
+  list.innerHTML = '';
+  Object.keys(STUDENTS).forEach(cls => {
+    const ab = absentMap[cls].size;
+    const row = document.createElement('div');
+    row.className = 'class-row' + (ab > 0 ? ' has-absent' : '');
+    row.innerHTML = `
+      <div class="cr-name">صف ${cls}</div>
+      <div class="cr-meta">
+        <span class="cr-total">${STUDENTS[cls].length} طالب</span>
+        ${ab > 0 ? `<span class="cr-absent">${ab} غائب</span>` : ''}
+        <span class="cr-arrow">‹</span>
+      </div>`;
+    row.onclick = () => openClass(cls);
+    list.appendChild(row);
+  });
+}
+
+function openClass(cls) {
+  currentClass = cls;
+  document.getElementById('sh-title').textContent = 'صف ' + cls;
+  document.getElementById('s-classes').classList.remove('active');
+  document.getElementById('s-students').classList.add('active');
+  renderStudents();
+}
+
+function goBack() {
+  document.getElementById('s-students').classList.remove('active');
+  document.getElementById('s-classes').classList.add('active');
+  document.getElementById('sendBar').classList.remove('visible');
+  buildClassList();
+}
+
+function renderStudents() {
+  const list = document.getElementById('studentsList');
+  const absent = absentMap[currentClass];
+  const students = STUDENTS[currentClass];
+  list.innerHTML = '';
+
+  students.forEach((name, i) => {
+    const isAbsent = absent.has(name);
+    const row = document.createElement('div');
+    row.className = 'student-row' + (isAbsent ? ' absent' : '');
+    row.innerHTML = `
+      <div class="sr-num">${i+1}</div>
+      <div class="sr-name">${name}</div>
+      <div class="sr-status">❌</div>`;
+    row.onclick = () => toggle(name);
+    list.appendChild(row);
+  });
+
+  updateStats();
+}
+
+function toggle(name) {
+  const s = absentMap[currentClass];
+  s.has(name) ? s.delete(name) : s.add(name);
+  renderStudents();
+}
+
+function markAll(asAbsent) {
+  if (asAbsent) STUDENTS[currentClass].forEach(n => absentMap[currentClass].add(n));
+  else absentMap[currentClass].clear();
+  renderStudents();
+}
+
+function updateStats() {
+  const total = STUDENTS[currentClass].length;
+  const ab = absentMap[currentClass].size;
+  document.getElementById('sh-stats').textContent = `${total} طالب — ${ab} غائب — ${total-ab} حاضر`;
+  document.getElementById('absentCount').textContent = ab + ' غائب';
+  const bar = document.getElementById('sendBar');
+  ab > 0 ? bar.classList.add('visible') : bar.classList.remove('visible');
+}
+
+async function sendToSheets() {
+  const absent = [...absentMap[currentClass]];
+  if (absent.length === 0) { toast('لا يوجد غائبون', 'error'); return; }
+  const url = localStorage.getItem('appsScriptUrl');
+  if (!url) { openModal(); return; }
+
+  const today = new Date().toLocaleDateString('ar-JO');
+  const rows = absent.map(name => ({name, className: currentClass, date: today, status: 'غائب'}));
+
+  const btn = document.getElementById('sendBtn');
+  const sp = document.getElementById('sendSpinner');
+  btn.disabled = true; sp.style.display = 'block';
+
+  try {
+    await fetch(url, {method:'POST', mode:'no-cors', headers:{'Content-Type':'application/json'}, body:JSON.stringify({rows})});
+    toast(`✅ تم إرسال ${absent.length} غياب`, 'success');
+    absentMap[currentClass].clear();
+    renderStudents();
+    setTimeout(goBack, 1200);
+  } catch(e) {
+    toast('❌ فشل الإرسال، تحقق من الرابط', 'error');
+  } finally {
+    btn.disabled = false; sp.style.display = 'none';
+  }
+}
+
+function openModal() { document.getElementById('setupModal').classList.add('open'); }
+function closeModal() { document.getElementById('setupModal').classList.remove('open'); }
+function handleModalBgClick(e) { if (e.target === e.currentTarget) closeModal(); }
+function saveUrl() {
+  const url = document.getElementById('scriptUrl').value.trim();
+  if (!url.startsWith('https://script.google.com')) { toast('الرابط غير صحيح', 'error'); return; }
+  localStorage.setItem('appsScriptUrl', url);
+  closeModal();
+  toast('✅ تم حفظ الرابط', 'success');
+}
+
+function toast(msg, type='') {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = 'toast show ' + type;
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+  function goHome() {
+  // تصفير أي غياب تم اختياره بالخطأ قبل العودة
+  if (currentClass) {
+    absentMap[currentClass].clear();
+  }
+  
+  // العودة للشاشة الرئيسية وإخفاء بار الإرسال
+  document.getElementById('s-students').classList.remove('active');
+  document.getElementById('s-classes').classList.add('active');
+  document.getElementById('sendBar').classList.remove('visible');
+  
+  currentClass = null;
+  buildClassList(); // لتحديث العدادات في القائمة الرئيسية لتصبح 0
+}
+</script>
+</body>
+</html>
