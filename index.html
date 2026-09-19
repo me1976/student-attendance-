@@ -28,7 +28,7 @@
   <div class="top-actions">
     <div class="date" id="todayDate"></div>
     <button class="icon-btn" onclick="goHome()" title="الرئيسية">🏠</button>
-    <button class="icon-btn" onclick="changePin()" title="تغيير الرمز">🔐</button>
+    
   </div>
 </div>
 
@@ -59,20 +59,10 @@
   <button id="saveBtn" class="send" onclick="saveAttendance()">حفظ 💾</button>
 </div>
 
-<div id="pinModal" class="modalbg">
-  <div class="modal">
-    <h3>رمز دخول المعلمين</h3>
-    <p>أدخل رمز المدرسة مرة واحدة على هذا الجهاز. سيُحفظ محليًا في المتصفح.</p>
-    <input id="pinInput" type="password" inputmode="numeric" autocomplete="off" maxlength="12" placeholder="••••••••">
-    <button onclick="savePin()">دخول</button>
-  </div>
-</div>
-
 <div id="toast" class="toast"></div>
 
 <script>
 const API='https://lpskxevggdiwhtqgazvs.supabase.co/functions/v1/attendance-api';
-let PIN=localStorage.getItem('attendanceTeacherPin')||'';
 let classes=[],currentClass='',students=[],absentIds=new Set();
 
 function localDateISO(){
@@ -80,38 +70,17 @@ function localDateISO(){
   return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
 }
 document.getElementById('todayDate').textContent=new Date().toLocaleDateString('ar-JO',{weekday:'short',day:'numeric',month:'long'});
-window.addEventListener('DOMContentLoaded',()=>{ if(!PIN) openPin(); else loadClasses(); });
+window.addEventListener('DOMContentLoaded',()=>loadClasses());
 
 async function api(action,payload={}){
   const res=await fetch(API,{
     method:'POST',
     headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({pin:PIN,action,...payload})
+    body:JSON.stringify({action,...payload})
   });
   const data=await res.json().catch(()=>({}));
   if(!res.ok) throw new Error(data.error||'فشل الاتصال');
   return data;
-}
-function openPin(){document.getElementById('pinModal').classList.add('show')}
-function changePin(){
-  PIN='';
-  localStorage.removeItem('attendanceTeacherPin');
-  document.getElementById('pinInput').value='';
-  openPin();
-}
-async function savePin(){
-  const v=document.getElementById('pinInput').value.trim();
-  if(!v)return;
-  PIN=v;
-  try{
-    await api('classes');
-    localStorage.setItem('attendanceTeacherPin',PIN);
-    document.getElementById('pinModal').classList.remove('show');
-    loadClasses();
-  }catch(e){
-    PIN='';
-    toast(e.message);
-  }
 }
 async function loadClasses(){
   const list=document.getElementById('classList');
@@ -128,8 +97,7 @@ async function loadClasses(){
       list.appendChild(row);
     }
   }catch(e){
-    if(e.message.includes('رمز'))openPin();
-    list.innerHTML='<div class="loading">تعذر التحميل</div>';
+    list.innerHTML='<div class="loading">تعذر التحميل — حدّث الصفحة وحاول مرة أخرى</div>';
     toast(e.message);
   }
 }
