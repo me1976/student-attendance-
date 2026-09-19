@@ -1,181 +1,62 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="mobile-web-app-capable" content="yes">
-<title>كشف الغياب</title>
-<style>
-@import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap');
-*{box-sizing:border-box}body{margin:0;font-family:'Tajawal',sans-serif;background:#f1f5f9;color:#0f172a;min-height:100vh}
-.topbar{background:#1d4ed8;color:#fff;padding:12px 14px;display:flex;justify-content:space-between;align-items:center;box-shadow:0 2px 8px rgba(29,78,216,.35);position:sticky;top:0;z-index:20}
-.brand{font-weight:800;font-size:16px}.top-actions{display:flex;gap:8px;align-items:center}.date{font-size:12px;opacity:.9;background:rgba(255,255,255,.13);padding:5px 8px;border-radius:10px}.icon-btn{width:36px;height:36px;border:0;border-radius:9px;background:rgba(255,255,255,.14);color:#fff;cursor:pointer}
-.screen{display:none;padding:12px}.screen.active{display:block}.title{font-size:13px;font-weight:700;color:#64748b;margin:4px 4px 10px}
-.class-list,.students-list{display:flex;flex-direction:column;gap:8px}.students-list{padding-bottom:95px}
-.class-row,.student-row{background:#fff;border-radius:14px;padding:16px;border:2px solid transparent;box-shadow:0 1px 3px rgba(0,0,0,.06);display:flex;justify-content:space-between;align-items:center;cursor:pointer;transition:.12s}
-.class-row:active,.student-row:active{transform:scale(.99)}.class-name{font-size:18px;font-weight:800}.meta{color:#64748b;font-size:14px}
-.student-row{border-color:#e2e8f0;gap:12px;justify-content:flex-start}.student-row.absent{background:#fef2f2;border-color:#fca5a5}.num{width:34px;height:34px;border-radius:50%;background:#f8fafc;display:grid;place-items:center;font-weight:700;color:#64748b;flex:0 0 34px}.student-row.absent .num{background:#dc2626;color:#fff}.student-name{flex:1;font-size:16px}.student-row.absent .student-name{color:#dc2626;font-weight:800}.x{opacity:0}.student-row.absent .x{opacity:1}
-.header{background:#fff;margin:-12px -12px 10px;padding:12px;border-bottom:1px solid #e2e8f0;position:sticky;top:60px;z-index:10}.header-top{display:flex;align-items:center;gap:10px}.back{width:40px;height:40px;border:0;border-radius:10px;background:#eff6ff;color:#1d4ed8;font-size:20px}.stats{color:#64748b;font-size:14px}.actions{display:flex;gap:8px;margin-top:10px}.small{flex:1;border:0;border-radius:10px;padding:12px;font-family:inherit;font-weight:800}.green{background:#f0fdf4;color:#16a34a}.red{background:#fef2f2;color:#dc2626}
-.sendbar{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid #e2e8f0;padding:10px 14px calc(10px + env(safe-area-inset-bottom));display:none;gap:10px;align-items:center;z-index:30;box-shadow:0 -4px 16px rgba(0,0,0,.06)}.sendbar.show{display:flex}.sendinfo{flex:1}.count{font-weight:800;color:#dc2626}.send{border:0;border-radius:12px;background:#1d4ed8;color:#fff;padding:13px 22px;font-family:inherit;font-size:16px;font-weight:800}.send:disabled{opacity:.5}
-.modalbg{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;padding:20px;z-index:100}.modalbg.show{display:flex}.modal{background:#fff;width:min(420px,100%);border-radius:18px;padding:18px}.modal h3{margin:0 0 8px}.modal p{color:#64748b;font-size:14px;line-height:1.7}.modal input{width:100%;padding:13px;border:1.5px solid #cbd5e1;border-radius:10px;font-family:inherit;font-size:18px;text-align:center;letter-spacing:2px}.modal button{margin-top:10px;width:100%;padding:12px;border:0;border-radius:10px;background:#1d4ed8;color:#fff;font-family:inherit;font-weight:800}
-.toast{position:fixed;top:76px;left:50%;transform:translateX(-50%) translateY(-12px);background:#0f172a;color:#fff;padding:9px 16px;border-radius:10px;opacity:0;transition:.2s;z-index:200;white-space:nowrap}.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}.loading{text-align:center;padding:30px;color:#64748b}
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#163d38">
+  <title>كشف الغياب | مدرسة أبي بكر الصديق</title>
+  <link rel="stylesheet" href="assets/app.css">
+  <script src="assets/app.js" defer></script>
 </head>
 <body>
-<div class="topbar">
-  <div class="brand">📋 كشف غياب مدرسة أبي بكر الصديق</div>
-  <div class="top-actions">
-    <div class="date" id="todayDate"></div>
-    <button class="icon-btn" onclick="goHome()" title="الرئيسية">🏠</button><button class="icon-btn" onclick="location.href=&quot;dashboard.html&quot;" title="لوحة الإدارة">⚙️</button>
-    
-  </div>
-</div>
-
-<div id="classesScreen" class="screen active">
-  <div class="title">اختر الصف الدراسي</div>
-  <div id="classList" class="class-list"><div class="loading">جارٍ تحميل الصفوف...</div></div>
-</div>
-
-<div id="studentsScreen" class="screen">
-  <div class="header">
-    <div class="header-top">
-      <button class="back" onclick="goBack()">←</button>
-      <div><div id="classTitle" class="class-name"></div><div id="stats" class="stats"></div></div>
-    </div>
-    <div class="actions">
-      <button class="small green" onclick="markAll(false)">✅ الكل حاضر</button>
-      <button class="small red" onclick="markAll(true)">❌ الكل غائب</button>
-    </div>
-  </div>
-  <div id="studentsList" class="students-list"></div>
-</div>
-
-<div id="sendBar" class="sendbar">
-  <div class="sendinfo">
-    <div id="absentCount" class="count">0 غائب</div>
-    <div class="meta">اضغط حفظ لتثبيت غياب اليوم</div>
-  </div>
-  <button id="saveBtn" class="send" onclick="saveAttendance()">حفظ 💾</button>
-</div>
-
-<div id="toast" class="toast"></div>
-
-<script>
-const API='https://lpskxevggdiwhtqgazvs.supabase.co/functions/v1/attendance-api';
-let classes=[],currentClass='',students=[],absentIds=new Set();
-
-function localDateISO(){
-  const d=new Date();
-  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
-}
-document.getElementById('todayDate').textContent=new Date().toLocaleDateString('ar-JO',{weekday:'short',day:'numeric',month:'long'});
-window.addEventListener('DOMContentLoaded',()=>loadClasses());
-
-async function api(action,payload={}){
-  const res=await fetch(API,{
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({action,...payload})
-  });
-  const data=await res.json().catch(()=>({}));
-  if(!res.ok) throw new Error(data.error||'فشل الاتصال');
-  return data;
-}
-async function loadClasses(){
-  const list=document.getElementById('classList');
-  list.innerHTML='<div class="loading">جارٍ تحميل الصفوف...</div>';
-  try{
-    const data=await api('classes');
-    classes=data.classes||[];
-    list.innerHTML='';
-    for(const c of classes){
-      const row=document.createElement('div');
-      row.className='class-row';
-      row.innerHTML='<div class="class-name">صف '+escapeHtml(c.class_name)+'</div><div class="meta">'+c.count+' طالب ‹</div>';
-      row.onclick=()=>openClass(c.class_name);
-      list.appendChild(row);
-    }
-  }catch(e){
-    list.innerHTML='<div class="loading">تعذر التحميل — حدّث الصفحة وحاول مرة أخرى</div>';
-    toast(e.message);
-  }
-}
-async function openClass(cls){
-  currentClass=cls;
-  absentIds.clear();
-  document.getElementById('classesScreen').classList.remove('active');
-  document.getElementById('studentsScreen').classList.add('active');
-  document.getElementById('classTitle').textContent='صف '+cls;
-  document.getElementById('studentsList').innerHTML='<div class="loading">جارٍ تحميل الطلاب...</div>';
-  try{
-    const [s,a]=await Promise.all([
-      api('students',{className:cls}),
-      api('day_attendance',{className:cls,date:localDateISO()})
-    ]);
-    students=s.students||[];
-    absentIds=new Set((a.absentIds||[]).map(Number));
-    renderStudents();
-  }catch(e){toast(e.message)}
-}
-function renderStudents(){
-  const list=document.getElementById('studentsList');
-  list.innerHTML='';
-  students.forEach((s,i)=>{
-    const row=document.createElement('div');
-    const absent=absentIds.has(Number(s.id));
-    row.className='student-row'+(absent?' absent':'');
-    row.innerHTML='<div class="num">'+(i+1)+'</div><div class="student-name">'+escapeHtml(s.name)+'</div><div class="x">❌</div>';
-    row.onclick=()=>{
-      const id=Number(s.id);
-      absentIds.has(id)?absentIds.delete(id):absentIds.add(id);
-      renderStudents();
-    };
-    list.appendChild(row);
-  });
-  const ab=absentIds.size,total=students.length;
-  document.getElementById('stats').textContent=total+' طالب — '+ab+' غائب — '+(total-ab)+' حاضر';
-  document.getElementById('absentCount').textContent=ab+' غائب';
-  document.getElementById('sendBar').classList.add('show');
-}
-function markAll(v){
-  absentIds.clear();
-  if(v)students.forEach(s=>absentIds.add(Number(s.id)));
-  renderStudents();
-}
-async function saveAttendance(){
-  const b=document.getElementById('saveBtn');
-  b.disabled=true;
-  try{
-    const r=await api('save_attendance',{
-      className:currentClass,
-      date:localDateISO(),
-      absentIds:[...absentIds]
-    });
-    toast('✅ تم حفظ الغياب: '+r.count);
-    setTimeout(goBack,700);
-  }catch(e){toast(e.message)}
-  finally{b.disabled=false}
-}
-function goBack(){
-  document.getElementById('studentsScreen').classList.remove('active');
-  document.getElementById('classesScreen').classList.add('active');
-  document.getElementById('sendBar').classList.remove('show');
-  currentClass='';students=[];absentIds.clear();
-  loadClasses();
-}
-function goHome(){
-  if(document.getElementById('studentsScreen').classList.contains('active')) goBack();
-  else loadClasses();
-}
-function escapeHtml(v){
-  return String(v).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
-}
-function toast(m){
-  const t=document.getElementById('toast');
-  t.textContent=m;
-  t.classList.add('show');
-  setTimeout(()=>t.classList.remove('show'),2600);
-}
-</script>
-</body></html>
+  <header class="topbar">
+    <div class="brand"><span class="brand-icon" aria-hidden="true">✓</span><div><strong>مدرسة أبي بكر الصديق</strong><span>نظام الحضور والغياب</span></div></div>
+    <time id="todayDate"></time>
+  </header>
+  <main class="wrap">
+    <nav class="mode-nav" aria-label="وضع الاستخدام">
+      <button id="attendanceMode" aria-pressed="true">📋 كشف الغياب</button>
+      <button id="adminMode" aria-pressed="false">⚙️ لوحة التحكم</button>
+    </nav>
+    <div id="message" class="notice" role="status" hidden></div>
+    <section id="attendanceView" aria-label="كشف الغياب">
+      <section id="classesScreen">
+        <div class="section-heading"><div><p class="eyebrow">العمل اليومي</p><h1>كشف الغياب</h1><p class="muted">اختر الصف، وحدّد الغائبين، ثم احفظ الكشف.</p></div><button id="refreshClasses" class="secondary">تحديث الصفوف ↻</button></div>
+        <p id="schoolSummary" class="muted"></p>
+        <div id="classList" class="class-grid" aria-live="polite"><p class="empty">جارٍ تحميل الصفوف…</p></div>
+      </section>
+      <section id="studentsScreen" hidden>
+        <div class="section-heading"><div><button id="backClasses" class="text-button">→ كل الصفوف</button><h1 id="classTitle"></h1><p id="rosterDate" class="muted"></p></div><button id="manageClass" class="secondary">⚙️ إدارة هذا الصف</button></div>
+        <div class="roster-toolbar card"><div><strong id="rosterStats"></strong><p class="muted">اضغط على اسم الطالب لتحديده غائبًا.</p></div><div class="actions"><button id="allPresent" class="soft-green">الكل حاضر</button><button id="allAbsent" class="soft-red">الكل غائب</button><button id="refreshRoster" class="secondary">تحديث الكشف ↻</button></div></div>
+        <div id="studentsList" class="students-list" aria-live="polite"></div>
+        <div id="saveBar" class="savebar"><div><strong id="absentCount"></strong><p id="saveState" class="muted"></p></div><button id="saveAttendance" class="primary">حفظ غياب اليوم</button></div>
+      </section>
+    </section>
+    <section id="adminView" aria-label="لوحة التحكم" hidden>
+      <div class="section-heading"><div><p class="eyebrow">كل ما تحتاجه، في مكان واحد</p><h1>لوحة التحكم</h1></div><button id="returnAttendance" class="secondary">📋 العودة لكشف الغياب</button></div>
+      <nav class="tabs" aria-label="أقسام لوحة التحكم">
+        <button data-panel="reports" aria-pressed="true">الغياب حسب التاريخ والصف</button>
+        <button data-panel="students" aria-pressed="false">إدارة الطلاب</button>
+        <button data-panel="analytics" aria-pressed="false">المتابعة والإحصائيات</button>
+      </nav>
+      <section id="reportsPanel" class="panel" aria-label="تقرير الغياب">
+        <div class="card filters no-print"><label>التاريخ<select id="dateFilter"><option value="">جارٍ التحميل…</option></select></label><label>الصف<select id="classFilter"><option value="">كل الصفوف</option></select></label><button id="printReport" class="secondary" disabled>طباعة</button></div>
+        <div class="print-heading"><h2>مدرسة أبي بكر الصديق — كشف الغياب</h2><p id="printContext"></p></div>
+        <div class="kpis"><div class="card"><span>عدد الغائبين</span><strong id="kpiCount">—</strong></div><div id="classesKpi" class="card"><span>عدد الصفوف التي فيها غياب</span><strong id="kpiClasses">—</strong></div></div>
+        <div class="card table-wrap"><table><thead><tr><th scope="col">اسم الطالب</th><th scope="col">الصف</th></tr></thead><tbody id="reportBody"></tbody></table></div>
+      </section>
+      <section id="studentsPanel" class="panel" aria-label="إدارة الطلاب" hidden>
+        <div class="card"><div class="filters"><label>الصف<select id="studentClassFilter"></select></label><label>بحث بالاسم<input id="studentSearch" type="search" placeholder="اكتب جزءًا من الاسم" autocomplete="off"></label><button id="refreshAdmin" class="secondary">تحديث الطلاب ↻</button></div></div>
+        <details class="card add-card"><summary>＋ إضافة طالب</summary><form id="addStudentForm" class="add-form"><label>اسم الطالب<input id="newName" required maxlength="150" autocomplete="off"></label><label>الصف<select id="newClass" required></select></label><button id="addStudent" type="submit" class="primary">إضافة</button></form></details>
+        <p id="adminCount" class="muted"></p><div id="adminStudents" class="admin-list" aria-live="polite"></div>
+      </section>
+      <section id="analyticsPanel" class="panel" aria-label="المتابعة والإحصائيات" hidden>
+        <div class="analytics-grid"><section class="card"><div class="section-heading compact"><div><h2>الأكثر غيابًا</h2><p class="muted">أعلى ٢٠ طالبًا حسب الغياب المسجل</p></div><button id="refreshAnalytics" class="text-button">تحديث ↻</button></div><div class="table-wrap"><table><thead><tr><th scope="col">اسم الطالب</th><th scope="col">الصف الحالي</th><th scope="col">مرات الغياب</th></tr></thead><tbody id="topAbsentBody"></tbody></table></div></section>
+        <section class="card"><h2>سجل غياب طالب</h2><label for="historySearch">ابحث عن طالب…</label><input id="historySearch" type="search" autocomplete="off" placeholder="الاسم أو جزء منه" aria-controls="historySuggestions"><div id="historySuggestions" class="suggestions" aria-live="polite"></div><div id="historySummary" class="history-summary" hidden></div><div class="table-wrap"><table><thead><tr><th scope="col">التاريخ</th><th scope="col">الصف وقت تسجيل الغياب</th></tr></thead><tbody id="historyBody"><tr><td colspan="2" class="empty">ابحث عن طالب لعرض سجله</td></tr></tbody></table></div></section></div>
+      </section>
+    </section>
+  </main>
+  <dialog id="studentDialog" aria-labelledby="dialogTitle"><form id="studentDialogForm"><h2 id="dialogTitle"></h2><p id="dialogDescription"></p><label id="editNameLabel" hidden>اسم الطالب<input id="editName" maxlength="150"></label><p id="dialogError" class="error" role="alert"></p><div class="actions"><button id="confirmStudent" type="submit" class="primary">تأكيد</button><button id="cancelDialog" type="button" class="secondary">إلغاء</button></div></form></dialog>
+  <footer class="footer">مدرسة أبي بكر الصديق · سجل يومي واضح، ومتابعة أسهل</footer>
+</body>
+</html>
