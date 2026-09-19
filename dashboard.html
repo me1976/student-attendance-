@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>إدارة الغياب</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap');
+*{box-sizing:border-box}body{margin:0;font-family:'Tajawal',sans-serif;background:#f1f5f9;color:#0f172a}.top{background:#0f172a;color:#fff;padding:16px 20px;display:flex;justify-content:space-between;align-items:center}.top h1{font-size:20px;margin:0}.wrap{max-width:1200px;margin:auto;padding:18px}.tabs{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}.tab{border:0;background:#e2e8f0;padding:10px 16px;border-radius:10px;font-family:inherit;font-weight:800;cursor:pointer}.tab.active{background:#1d4ed8;color:#fff}.panel{display:none}.panel.active{display:block}.card{background:#fff;border-radius:14px;padding:16px;box-shadow:0 1px 4px rgba(0,0,0,.06);margin-bottom:14px}.filters{display:grid;grid-template-columns:repeat(4,minmax(150px,1fr));gap:10px}.filters label{font-size:12px;color:#64748b}.filters input,.filters select,.student-form input,.student-form select{width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:9px;font-family:inherit}.btn{border:0;border-radius:9px;padding:10px 14px;background:#1d4ed8;color:#fff;font-family:inherit;font-weight:800;cursor:pointer}.btn.secondary{background:#475569}.btn.danger{background:#dc2626}.toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}table{width:100%;border-collapse:collapse;background:#fff}th,td{padding:10px;border-bottom:1px solid #e2e8f0;text-align:right;font-size:14px}th{background:#f8fafc}.kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px}.kpi{background:#fff;padding:14px;border-radius:12px}.kpi strong{display:block;font-size:24px;color:#1d4ed8}.student-form{display:grid;grid-template-columns:2fr 1fr auto;gap:8px}.muted{color:#64748b}.modalbg{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;padding:20px;z-index:50}.modalbg.show{display:flex}.modal{background:#fff;border-radius:16px;padding:18px;width:min(420px,100%)}.modal input{width:100%;padding:12px;border:1px solid #cbd5e1;border-radius:9px;font-family:inherit;text-align:center;font-size:18px}.modal button{width:100%;margin-top:10px}.empty{text-align:center;color:#64748b;padding:18px}
+@media(max-width:800px){.filters{grid-template-columns:1fr 1fr}.student-form{grid-template-columns:1fr}.kpis{grid-template-columns:1fr}.wrap{padding:10px}.top h1{font-size:17px}table{display:block;overflow-x:auto;white-space:nowrap}}
+@media print{.top,.tabs,.filters,.toolbar,#studentsPanel{display:none!important}.wrap{padding:0}.card{box-shadow:none}.panel{display:block!important}body{background:#fff}}
+</style>
+</head>
+<body>
+<div class="top">
+  <h1>لوحة إدارة الغياب</h1>
+  
+</div>
+
+<div class="wrap">
+  <div class="tabs">
+    <button id="tabReports" class="tab active" onclick="showTab('reports')">التقارير والطباعة</button>
+    <button id="tabStudents" class="tab" onclick="showTab('students')">إدارة الطلاب</button>
+  </div>
+
+  <div id="reportsPanel" class="panel active">
+    <div class="card">
+      <div class="filters">
+        <div><label>من تاريخ</label><input type="date" id="from"></div>
+        <div><label>إلى تاريخ</label><input type="date" id="to"></div>
+        <div><label>الصف</label><select id="classFilter"><option value="">كل الصفوف</option></select></div>
+        <div style="align-self:end"><button class="btn" onclick="loadReport()">عرض التقرير</button></div>
+      </div>
+      <div class="toolbar">
+        <button class="btn secondary" onclick="setToday()">غياب اليوم</button>
+        <button class="btn secondary" onclick="window.print()">🖨️ طباعة</button>
+      </div>
+    </div>
+
+    <div class="kpis">
+      <div class="kpi"><span class="muted">عدد سجلات الغياب</span><strong id="kpiCount">0</strong></div>
+      <div class="kpi"><span class="muted">عدد الأيام</span><strong id="kpiDays">0</strong></div>
+      <div class="kpi"><span class="muted">عدد الصفوف</span><strong id="kpiClasses">0</strong></div>
+    </div>
+
+    <div class="card">
+      <table>
+        <thead><tr><th>التاريخ</th><th>الصف</th><th>اسم الطالب</th></tr></thead>
+        <tbody id="reportBody"><tr><td colspan="3" class="empty">لا توجد سجلات</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div id="studentsPanel" class="panel">
+    <div class="card">
+      <div class="student-form">
+        <input id="newName" placeholder="اسم الطالب">
+        <select id="newClass"></select>
+        <button class="btn" onclick="addStudent()">إضافة طالب</button>
+      </div>
+    </div>
+    <div class="card">
+      <table>
+        <thead><tr><th>الاسم</th><th>الصف</th><th>الحالة</th><th>إجراء</th></tr></thead>
+        <tbody id="studentsBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+const API='https://lpskxevggdiwhtqgazvs.supabase.co/functions/v1/attendance-api';
+let classes=[],students=[];
+
+function localDateISO(){
+  const d=new Date();
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+async function api(action,payload={}){
+  const r=await fetch(API,{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({action,...payload})
+  });
+  const d=await r.json().catch(()=>({}));
+  if(!r.ok)throw new Error(d.error||'فشل الاتصال');
+  return d;
+}
+window.addEventListener('DOMContentLoaded',()=>{
+  const d=localDateISO();
+  document.getElementById('from').value=d;
+  document.getElementById('to').value=d;
+  init();
+});
+async function init(){
+  try{
+    const d=await api('classes');
+    classes=d.classes||[];
+    fillClassSelects();
+    await loadReport();
+  }catch(e){
+    alert(e.message);
+  }
+}
+function fillClassSelects(){
+  const report=document.getElementById('classFilter'),add=document.getElementById('newClass');
+  report.innerHTML='<option value="">كل الصفوف</option>';
+  add.innerHTML='';
+  for(const c of classes){
+    const o1=document.createElement('option');o1.value=c.class_name;o1.textContent=c.class_name;report.appendChild(o1);
+    const o2=document.createElement('option');o2.value=c.class_name;o2.textContent=c.class_name;add.appendChild(o2);
+  }
+}
+function showTab(t){
+  document.getElementById('reportsPanel').classList.toggle('active',t==='reports');
+  document.getElementById('studentsPanel').classList.toggle('active',t==='students');
+  document.getElementById('tabReports').classList.toggle('active',t==='reports');
+  document.getElementById('tabStudents').classList.toggle('active',t==='students');
+  if(t==='students')loadStudents();
+}
+function setToday(){
+  const d=localDateISO();
+  document.getElementById('from').value=d;
+  document.getElementById('to').value=d;
+  loadReport();
+}
+async function loadReport(){
+  try{
+    const d=await api('report',{
+      from:document.getElementById('from').value,
+      to:document.getElementById('to').value,
+      className:document.getElementById('classFilter').value
+    });
+    const rows=d.rows||[];
+    document.getElementById('reportBody').innerHTML=rows.length
+      ?rows.map(r=>'<tr><td>'+escapeHtml(r.date)+'</td><td>'+escapeHtml(r.className)+'</td><td>'+escapeHtml(r.name)+'</td></tr>').join('')
+      :'<tr><td colspan="3" class="empty">لا توجد سجلات</td></tr>';
+    document.getElementById('kpiCount').textContent=rows.length;
+    document.getElementById('kpiDays').textContent=new Set(rows.map(r=>r.date)).size;
+    document.getElementById('kpiClasses').textContent=new Set(rows.map(r=>r.className)).size;
+  }catch(e){alert(e.message)}
+}
+async function loadStudents(){
+  try{
+    const d=await api('students_admin');
+    students=d.students||[];
+    renderStudents();
+  }catch(e){alert(e.message)}
+}
+function renderStudents(){
+  document.getElementById('studentsBody').innerHTML=students.map(s=>
+    '<tr><td>'+escapeHtml(s.name)+'</td><td>'+escapeHtml(s.class_name)+'</td><td>'+(s.active?'فعال':'موقوف')+'</td><td>'+
+    '<button class="btn secondary" onclick="editStudent('+s.id+')">تعديل</button> '+
+    '<button class="btn '+(s.active?'danger':'secondary')+'" onclick="toggleStudent('+s.id+','+(!s.active)+')">'+(s.active?'إيقاف':'تفعيل')+'</button></td></tr>'
+  ).join('');
+}
+async function addStudent(){
+  const name=document.getElementById('newName').value.trim(),className=document.getElementById('newClass').value;
+  if(!name)return;
+  try{
+    await api('student_add',{name,className});
+    document.getElementById('newName').value='';
+    await loadStudents();
+    alert('تمت إضافة الطالب');
+  }catch(e){alert(e.message)}
+}
+async function editStudent(id){
+  const s=students.find(x=>Number(x.id)===Number(id));
+  if(!s)return;
+  const name=prompt('اسم الطالب',s.name);
+  if(name===null)return;
+  const className=prompt('الصف',s.class_name);
+  if(className===null)return;
+  try{
+    await api('student_update',{id,name,className});
+    await loadStudents();
+  }catch(e){alert(e.message)}
+}
+async function toggleStudent(id,active){
+  try{
+    await api('student_update',{id,active});
+    await loadStudents();
+  }catch(e){alert(e.message)}
+}
+function escapeHtml(v){
+  return String(v).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+}
+</script>
+</body>
+</html>
