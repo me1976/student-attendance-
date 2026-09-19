@@ -14,7 +14,7 @@
 <body>
 <div class="top">
   <h1>لوحة إدارة الغياب</h1>
-  <button class="btn secondary" onclick="changePin()">تغيير الرمز</button>
+  
 </div>
 
 <div class="wrap">
@@ -68,18 +68,9 @@
   </div>
 </div>
 
-<div id="pinModal" class="modalbg">
-  <div class="modal">
-    <h3>رمز الإدارة</h3>
-    <p class="muted">أدخل رمز لوحة الإدارة.</p>
-    <input id="pinInput" type="password" inputmode="numeric" autocomplete="off">
-    <button class="btn" onclick="savePin()">دخول</button>
-  </div>
-</div>
-
 <script>
 const API='https://lpskxevggdiwhtqgazvs.supabase.co/functions/v1/attendance-api';
-let PIN=localStorage.getItem('attendanceAdminPin')||'',classes=[],students=[];
+let classes=[],students=[];
 
 function localDateISO(){
   const d=new Date();
@@ -89,7 +80,7 @@ async function api(action,payload={}){
   const r=await fetch(API,{
     method:'POST',
     headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({pin:PIN,action,...payload})
+    body:JSON.stringify({action,...payload})
   });
   const d=await r.json().catch(()=>({}));
   if(!r.ok)throw new Error(d.error||'فشل الاتصال');
@@ -99,25 +90,8 @@ window.addEventListener('DOMContentLoaded',()=>{
   const d=localDateISO();
   document.getElementById('from').value=d;
   document.getElementById('to').value=d;
-  if(!PIN)openPin();else init();
+  init();
 });
-function openPin(){document.getElementById('pinModal').classList.add('show')}
-function changePin(){
-  PIN='';
-  localStorage.removeItem('attendanceAdminPin');
-  document.getElementById('pinInput').value='';
-  openPin();
-}
-async function savePin(){
-  PIN=document.getElementById('pinInput').value.trim();
-  if(!PIN)return;
-  try{
-    await api('students_admin');
-    localStorage.setItem('attendanceAdminPin',PIN);
-    document.getElementById('pinModal').classList.remove('show');
-    init();
-  }catch(e){PIN='';alert(e.message)}
-}
 async function init(){
   try{
     const d=await api('classes');
@@ -125,9 +99,7 @@ async function init(){
     fillClassSelects();
     await loadReport();
   }catch(e){
-    localStorage.removeItem('attendanceAdminPin');
-    PIN='';
-    openPin();
+    alert(e.message);
   }
 }
 function fillClassSelects(){
