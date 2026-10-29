@@ -53,6 +53,25 @@
       <section id="analyticsPanel" class="panel" aria-label="المتابعة والإحصائيات" hidden>
         <div class="analytics-grid"><section class="card"><div class="section-heading compact"><div><h2>الأكثر غيابًا</h2><p class="muted">أعلى ٢٠ طالبًا حسب الغياب المسجل</p></div><button id="refreshAnalytics" class="text-button">تحديث ↻</button></div><div class="table-wrap"><table><thead><tr><th scope="col">اسم الطالب</th><th scope="col">الصف الحالي</th><th scope="col">مرات الغياب</th></tr></thead><tbody id="topAbsentBody"></tbody></table></div></section>
         <section class="card"><h2>سجل غياب طالب</h2><label for="historySearch">ابحث عن طالب…</label><input id="historySearch" type="search" autocomplete="off" placeholder="الاسم أو جزء منه" aria-controls="historySuggestions"><div id="historySuggestions" class="suggestions" aria-live="polite"></div><div id="historySummary" class="history-summary" hidden></div><div class="table-wrap"><table><thead><tr><th scope="col">التاريخ</th><th scope="col">الصف وقت تسجيل الغياب</th></tr></thead><tbody id="historyBody"><tr><td colspan="2" class="empty">ابحث عن طالب لعرض سجله</td></tr></tbody></table></div></section></div>
+        <section id="classRecordCard" class="card"><h2 class="no-print">سجل غياب صف</h2>
+          <p class="muted no-print">اختر الشعبة والفترة، ثم اعرض السجل واحفظه كملف PDF لإرساله إلى المربي.</p>
+          <div class="filters record-filters no-print">
+            <label>الصف والشعبة<select id="recordClass"></select></label>
+            <label>العام الدراسي<select id="recordYear"></select></label>
+            <label>الفترة<select id="recordPeriod"></select></label>
+            <label class="record-custom" hidden>من تاريخ<input id="recordFrom" type="date"></label>
+            <label class="record-custom" hidden>إلى تاريخ<input id="recordTo" type="date"></label>
+            <button id="showRecord" class="primary">عرض السجل</button>
+          </div>
+          <p id="recordMessage" class="error no-print" role="alert"></p>
+          <div id="recordResult" hidden>
+            <div class="print-heading"><h2>مدرسة أبي بكر الصديق — سجل غياب صف</h2><p id="recordContext"></p></div>
+            <div class="actions record-actions no-print"><button id="printRecord" class="secondary">حفظ كملف PDF 🖨</button><span class="muted">في نافذة الطباعة اختر «حفظ كـ PDF» (أو «Save as PDF»).</span></div>
+            <div id="recordSummary" class="history-summary"></div>
+            <div class="table-wrap"><table class="record-table"><thead><tr><th scope="col">#</th><th scope="col">اسم الطالب</th><th scope="col">أيام الغياب</th><th scope="col">تواريخ الغياب</th></tr></thead><tbody id="recordBody"></tbody></table></div>
+            <p class="muted">يُحتسب الغياب المسجَّل باسم هذه الشعبة وقت التسجيل؛ وطلاب نُقلوا إليها لا يظهر لهم غيابهم السابق في شعبتهم القديمة.</p>
+          </div>
+        </section>
       </section>
     </section>
   </main>

@@ -6,6 +6,7 @@ const state = {
   mode: 'attendance', panel: 'reports', classes: [], students: [], studentsReady: false,
   currentClass: '', drafts: new Map(), rosterToken: 0, reportToken: 0, historyToken: 0,
   adminToken: 0, analyticsToken: 0, historyStudentId: null, saving: false, mutating: false, dialog: null,
+  recordToken: 0, record: null,
 };
 const draftKey = 'school-attendance-drafts-v1';
 const collator = new Intl.Collator('ar', { numeric: true });
@@ -67,6 +68,7 @@ function classNames() { return state.classes.map(c => c.class_name).sort(sortCla
 function fillClassSelectors() {
   options($('studentClassFilter'), classNames());
   options($('newClass'), classNames());
+  options($('recordClass'), classNames());
 }
 function persistDrafts() {
   const entries = [...state.drafts].filter(([, draft]) => draft.changes.size)
@@ -376,8 +378,101 @@ async function addStudent(event) {
   } finally { state.mutating = false; $('addStudent').disabled = false; }
 }
 async function loadAnalytics() {
-  await Promise.all([run(loadAdminStudents), run(loadTopAbsent),
+  await Promise.all([run(loadAdminStudents), run(loadTopAbsent), run(loadRecordYears),
     state.historyStudentId ? run(() => loadStudentHistory(state.historyStudentId)) : Promise.resolve()]);
+}
+// Class absence record: school months run August to June of the following year.
+const schoolMonths = [8, 9, 10, 11, 12, 1, 2, 3, 4, 5, 6];
+const monthNames = { 1: 'كانون الثاني', 2: 'شباط', 3: 'آذار', 4: 'نيسان', 5: 'أيار', 6: 'حزيران', 8: 'آب', 9: 'أيلول', 10: 'تشرين الأول', 11: 'تشرين الثاني', 12: 'كانون الأول' };
+const pad = number => String(number).padStart(2, '0');
+function schoolYearOf(day) { const [year, month] = day.split('-').map(Number); return month >= 8 ? year : year - 1; }
+function fillRecordYears(earliest) {
+  const current = schoolYearOf(today);
+  const first = Math.min(current, earliest ?? current);
+  const select = $('recordYear'), previous = select.value;
+  select.replaceChildren();
+  for (let year = current; year >= first; year--) select.add(new Option(`${year} / ${year + 1}`, String(year)));
+  select.value = [...select.options].some(option => option.value === previous) ? previous : String(current);
+}
+function initRecordControls() {
+  fillRecordYears();
+  const period = $('recordPeriod');
+  period.add(new Option('كل العام الدراسي حتى اليوم', 'all'));
+  schoolMonths.forEach(month => period.add(new Option(monthNames[month], String(month))));
+  period.add(new Option('فترة مخصصة (من تاريخ إلى تاريخ)', 'custom'));
+  $('recordFrom').max = $('recordTo').max = today;
+}
+async function loadRecordYears() {
+  const data = await api('dates');
+  fillRecordYears(data.dates.length ? schoolYearOf(data.dates[data.dates.length - 1]) : undefined);
+}
+function recordRange() {
+  const year = Number($('recordYear').value), period = $('recordPeriod').value;
+  let from, to;
+  if (period === 'custom') {
+    from = $('recordFrom').value; to = $('recordTo').value;
+    if (!from || !to) throw new Error('اختر تاريخ البداية وتاريخ النهاية.');
+    if (from > to) throw new Error('تاريخ البداية بعد تاريخ النهاية.');
+  } else if (period === 'all') {
+    from = `${year}-08-01`; to = `${year + 1}-06-30`;
+  } else {
+    const month = Number(period), calendarYear = month >= 8 ? year : year + 1;
+    from = `${calendarYear}-${pad(month)}-01`;
+    to = `${calendarYear}-${pad(month)}-${pad(new Date(Date.UTC(calendarYear, month, 0)).getUTCDate())}`;
+  }
+  if (from > today) throw new Error('هذه الفترة لم تبدأ بعد.');
+  return { from, to: to > today ? today : to };
+}
+function shortDate(day, withYear) {
+  const [year, month, date] = day.split('-').map(Number);
+  return `<bdi>${date}/${month}${withYear ? `/${year}` : ''}</bdi>`;
+}
+async function loadClassRecord() {
+  $('recordMessage').textContent = '';
+  $('recordResult').hidden = true;
+  state.record = null;
+  const className = $('recordClass').value;
+  let range;
+  try {
+    if (!className) throw new Error('اختر الصف والشعبة.');
+    range = recordRange();
+  } catch (error) { $('recordMessage').textContent = error.message; return; }
+  const { from, to } = range, token = ++state.recordToken;
+  $('showRecord').disabled = true;
+  try {
+    const [roster, report] = await Promise.all([api('students', { className }), api('report', { from, to, className })]);
+    if (token !== state.recordToken) return;
+    const byStudent = new Map(roster.students.map(s => [s.id, { name: s.name, current: true, dates: new Set() }]));
+    for (const row of report.rows) {
+      if (!byStudent.has(row.studentId)) byStudent.set(row.studentId, { name: row.name, current: false, dates: new Set() });
+      byStudent.get(row.studentId).dates.add(row.date);
+    }
+    const rows = [...byStudent.values()].sort((a, b) => b.dates.size - a.dates.size || collator.compare(a.name, b.name));
+    const withYear = from.slice(0, 4) !== to.slice(0, 4);
+    const absentStudents = rows.filter(r => r.dates.size).length, totalDays = rows.reduce((sum, r) => sum + r.dates.size, 0);
+    $('recordBody').innerHTML = rows.length ? rows.map((r, index) => `<tr><td class="num">${index + 1}</td><td>${esc(r.name)}${r.current ? '' : '<span class="badge">ليس في قائمة الشعبة الحالية</span>'}</td><td class="count${r.dates.size ? '' : ' zero'}">${r.dates.size}</td><td class="dates">${[...r.dates].sort().map(day => shortDate(day, withYear)).join('، ') || '—'}</td></tr>`).join('') : emptyRow('لا يوجد طلاب في هذه الشعبة', 4);
+    const period = `من ${formatDate(from)} إلى ${formatDate(to)}`;
+    $('recordContext').textContent = `أُعدّ بتاريخ ${formatDate(today)}`;
+    $('recordSummary').innerHTML = `<strong>${esc(className)}</strong><p>${period}</p><p>${rows.length} طالبًا · ${absentStudents} منهم لديهم غياب · مجموع أيام الغياب: <strong>${totalDays}</strong></p>`;
+    state.record = { className, from, to };
+    $('recordResult').hidden = false;
+  } catch (error) {
+    if (token === state.recordToken) $('recordMessage').textContent = error.message;
+  } finally { if (token === state.recordToken) $('showRecord').disabled = false; }
+}
+function printClassRecord() {
+  if (!state.record) return;
+  const previousTitle = document.title;
+  // Browsers use the page title as the default PDF file name.
+  document.title = `غياب ${state.record.className} ${state.record.from} إلى ${state.record.to}`;
+  document.body.classList.add('printing-record');
+  const restore = () => {
+    document.title = previousTitle;
+    document.body.classList.remove('printing-record');
+    window.removeEventListener('afterprint', restore);
+  };
+  window.addEventListener('afterprint', restore);
+  window.print();
 }
 async function loadTopAbsent() {
   const token = ++state.analyticsToken;
@@ -439,7 +534,21 @@ function bindEvents() {
   $('refreshRoster').onclick = () => run(() => openClass(state.currentClass));
   document.querySelectorAll('[data-panel]').forEach(button => { button.onclick = () => run(() => showPanel(button.dataset.panel)); });
   $('dateFilter').onchange = $('classFilter').onchange = () => run(loadReport);
-  $('printReport').onclick = () => window.print();
+  $('printReport').onclick = () => { document.body.classList.remove('printing-record'); window.print(); };
+  $('recordPeriod').onchange = () => {
+    const custom = $('recordPeriod').value === 'custom';
+    document.querySelectorAll('.record-custom').forEach(label => { label.hidden = !custom; });
+    if (custom) {
+      if (!$('recordFrom').value) $('recordFrom').value = `${Math.min(Number($('recordYear').value), schoolYearOf(today))}-08-01`;
+      if (!$('recordTo').value) $('recordTo').value = today;
+    }
+  };
+  for (const control of ['recordClass', 'recordYear', 'recordPeriod', 'recordFrom', 'recordTo']) $(control).addEventListener('change', () => {
+    ++state.recordToken; state.record = null;
+    $('recordResult').hidden = true; $('recordMessage').textContent = ''; $('showRecord').disabled = false;
+  });
+  $('showRecord').onclick = () => run(loadClassRecord);
+  $('printRecord').onclick = printClassRecord;
   $('studentClassFilter').onchange = () => { $('newClass').value = $('studentClassFilter').value; renderAdminStudents(); };
   $('studentSearch').oninput = renderAdminStudents;
   $('refreshAdmin').onclick = () => run(loadAdminStudents);
@@ -472,6 +581,7 @@ function bindEvents() {
   });
 }
 restoreDrafts();
+initRecordControls();
 bindEvents();
 $('todayDate').textContent = formatDate(today);
 $('todayDate').dateTime = today;
